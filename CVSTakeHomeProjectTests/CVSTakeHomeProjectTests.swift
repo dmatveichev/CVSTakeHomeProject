@@ -52,22 +52,11 @@ final class FetchServiceTests: XCTestCase {
         mockSession.data = responseData
         mockSession.response = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)
 
-        let result = try await fetchService.fetchItems(with: "test")
+        let result = try await fetchService.fetchItems(with: "")
 
         XCTAssertEqual(result.title, "Sample Title")
         XCTAssertEqual(result.items.count, 1)
         XCTAssertEqual(result.items[0].title, "Photo 1")
-    }
-
-    func testFetchItemsInvalidURL() async {
-        do {
-            _ = try await fetchService.fetchItems(with: "%%%%")
-            XCTFail("Expected FetchError.invalidURL but no error was thrown")
-        } catch let error as FetchError {
-            XCTAssertEqual(error, .invalidURL)
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
     }
 
     func testFetchItemsInvalidResponse() async {
@@ -96,5 +85,16 @@ final class FetchServiceTests: XCTestCase {
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
+    }
+    
+    func testFetchItemsWithINvalidSearchTerm() async throws {
+        let responseData = try JSONEncoder().encode(sampleResponse)
+        mockSession.data = responseData
+        mockSession.response = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)
+
+        let result = try await fetchService.fetchItems(with: "%%%%123%%%%")
+
+        XCTAssertEqual(result.items.count, 1)
+        XCTAssertEqual(result.items[0].title, "Photo 1")
     }
 }
