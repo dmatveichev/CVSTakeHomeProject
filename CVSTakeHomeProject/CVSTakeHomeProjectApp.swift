@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct CVSTakeHomeProjectApp: App {
+    private let imageCache = TemporaryImageCache()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            FlickrGridView()
+                .environment(\.imageCache, imageCache)
         }
     }
 }

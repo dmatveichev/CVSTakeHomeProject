@@ -6,30 +6,95 @@
 //
 
 import XCTest
+import Foundation
 
-final class CVSTakeHomeProjectTests: XCTestCase {
+@testable import CVSTakeHomeProject
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+final class FetchServiceTests: XCTestCase {
+    var mockSession: MockURLSession!
+    var fetchService: FetchService!
+    
+    let sampleResponse = FlickrPhotoResponse(
+        title: "Sample Title",
+        link: "https://example.com",
+        description: "",
+        modified: "2024-11-21T13:29:08Z",
+        generator: "https://example.com",
+        items: [
+            FlickrPhoto(
+                title: "Photo 1",
+                link: "https://example.com/photo1",
+                media: Media(m: "https://example.com/photo.jpg"),
+                dateTaken: "2024-11-21T13:29:08Z",
+                description: "Sample Description",
+                published: "2024-11-21T13:29:08Z",
+                author: "Author Name",
+                authorId: "123",
+                tags: "sample,tags"
+            )
+        ]
+    )
+
+    override func setUp() {
+        super.setUp()
+        mockSession = MockURLSession()
+        fetchService = FetchService(session: mockSession)
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    override func tearDown() {
+        mockSession = nil
+        fetchService = nil
+        super.tearDown()
     }
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    func testFetchItemsSuccess() async throws {
+        let responseData = try JSONEncoder().encode(sampleResponse)
+        mockSession.data = responseData
+        mockSession.response = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)
+
+        let result = try await fetchService.fetchItems(with: "test")
+
+        XCTAssertEqual(result.title, "Sample Title")
+        XCTAssertEqual(result.items.count, 1)
+        XCTAssertEqual(result.items[0].title, "Photo 1")
     }
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        measure {
-            // Put the code you want to measure the time of here.
+    func testFetchItemsInvalidURL() async {
+        do {
+            _ = try await fetchService.fetchItems(with: "%%%%")
+            XCTFail("Expected FetchError.invalidURL but no error was thrown")
+        } catch let error as FetchError {
+            XCTAssertEqual(error, .invalidURL)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
         }
     }
 
+    func testFetchItemsInvalidResponse() async {
+        mockSession.data = Data()
+        mockSession.response = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 500, httpVersion: nil, headerFields: nil)
+
+        do {
+            _ = try await fetchService.fetchItems(with: "test")
+            XCTFail("Expected FetchError.invalidResponse but no error was thrown")
+        } catch let error as FetchError {
+            XCTAssertEqual(error, .invalidResponse)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testFetchItemsDecodingError() async {
+        mockSession.data = Data() // Invalid JSON data
+        mockSession.response = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)
+
+        do {
+            _ = try await fetchService.fetchItems(with: "test")
+            XCTFail("Expected FetchError.invalidData but no error was thrown")
+        } catch let error as FetchError {
+            XCTAssertEqual(error, .invalidData)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
 }
