@@ -1,9 +1,4 @@
-/*
-Project Structure:
-Folder:
-- FileName // Description
-
-*/
+CVSTakeHomeProject Structure:
 
 Entities:
 - FlickrPhoto // structure to represent photo data from https://api.flickr.com
